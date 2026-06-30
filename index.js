@@ -151,34 +151,48 @@ client.on('disconnected', (reason) => {
 
 client.on('message', async (msg) => {
     const contact = await msg.getContact();
-    let mediaPath = null;
-    let mediaMimetype = null;
+    const senderName = contact.pushname || contact.name || "Unknown";
+    const timeStr = new Date().toLocaleTimeString();
+
+    // نسجل الرسالة فوراً (النص بيتسجل بسرعة من غير ما ينتظر تحميل الميديا)
+    saveMessage({
+        msg_id: msg.id.id,
+        body: msg.body || '',
+        sender: senderName,
+        time: timeStr,
+        mediaPath: null,
+        mediaMimetype: null
+    });
 
     if (msg.hasMedia) {
-        try {
-            const media = await msg.downloadMedia();
-            if (media && media.data) {
+        // تحميل الميديا في الخلفية بـ timeout قصير، عشان متعطلش تسجيل النص
+        downloadMediaWithTimeout(msg, 15000)
+            .then(media => {
+                if (!media || !media.data) return;
                 const ext = media.mimetype ? media.mimetype.split('/')[1].split(';')[0] : 'bin';
                 const fileName = `${msg.id.id}.${ext}`;
                 const filePath = path.join(MEDIA_DIR, fileName);
                 fs.writeFileSync(filePath, Buffer.from(media.data, 'base64'));
-                mediaPath = filePath;
-                mediaMimetype = media.mimetype;
-            }
-        } catch (err) {
-            console.error('Media download error:', err.message);
-        }
+                // تحديث السجل بمسار الميديا بعد ما يخلص تحميل
+                saveMessage({
+                    msg_id: msg.id.id,
+                    body: msg.body || '',
+                    sender: senderName,
+                    time: timeStr,
+                    mediaPath: filePath,
+                    mediaMimetype: media.mimetype
+                });
+            })
+            .catch(err => console.error('Media download error:', err.message));
     }
-
-    saveMessage({
-        msg_id: msg.id.id,
-        body: msg.body || '',
-        sender: contact.pushname || contact.name || "Unknown",
-        time: new Date().toLocaleTimeString(),
-        mediaPath,
-        mediaMimetype
-    });
 });
+
+function downloadMediaWithTimeout(msg, ms) {
+    return Promise.race([
+        msg.downloadMedia(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Media download timed out')), ms))
+    ]);
+}
 
 client.on('message_revoke_everyone', async (after, before) => {
     if (!before) return;
