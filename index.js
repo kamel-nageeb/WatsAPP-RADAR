@@ -93,7 +93,7 @@ async function sendWithRetry(fn, retries = 3, delayMs = 2000) {
 // ---------------------------------------------------------------
 
 const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }), // حفظ الجلسة في ملف
+    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
     puppeteer: {
         headless: true,
         executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable',
@@ -104,7 +104,11 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
+            '--disable-gpu',
+
+            '--single-process',
+            '--disable-extensions',
+            '--memory-pressure-off'
         ]
     }
 });
