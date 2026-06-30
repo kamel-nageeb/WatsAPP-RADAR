@@ -163,7 +163,7 @@ client.on('message', async (msg) => {
 
     const contact = await msg.getContact();
     const senderName = contact.pushname || contact.name || "Unknown";
-    const timeStr = new Date().toLocaleTimeString();
+    const timeStr = new Date().toLocaleTimeString('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
     // نسجل الرسالة فوراً (النص بيتسجل بسرعة من غير ما ينتظر تحميل الميديا)
     saveMessage({
