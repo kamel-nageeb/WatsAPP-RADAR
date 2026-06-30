@@ -159,6 +159,8 @@ client.on('disconnected', (reason) => {
 });
 
 client.on('message', async (msg) => {
+    console.log(`📩 Message received | id=${msg.id.id} | from=${msg.from} | hasMedia=${msg.hasMedia} | body="${(msg.body || '').slice(0, 30)}"`);
+
     const contact = await msg.getContact();
     const senderName = contact.pushname || contact.name || "Unknown";
     const timeStr = new Date().toLocaleTimeString();
@@ -172,6 +174,7 @@ client.on('message', async (msg) => {
         mediaPath: null,
         mediaMimetype: null
     });
+    console.log(`💾 Message saved to DB | id=${msg.id.id}`);
 
     if (msg.hasMedia) {
         // تحميل الميديا في الخلفية بـ timeout قصير، عشان متعطلش تسجيل النص
@@ -204,9 +207,17 @@ function downloadMediaWithTimeout(msg, ms) {
 }
 
 client.on('message_revoke_everyone', async (after, before) => {
-    if (!before) return;
+    console.log(`🗑️ Revoke event fired | before=${before ? before.id.id : 'null'} | after=${after ? after.id.id : 'null'}`);
+    if (!before) {
+        console.log('⚠️ No "before" message object — WhatsApp did not provide original content.');
+        return;
+    }
     const originalMsg = getMessage(before.id.id);
-    if (!originalMsg) return;
+    if (!originalMsg) {
+        console.log(`⚠️ Message ${before.id.id} not found in local DB — was not saved before deletion.`);
+        return;
+    }
+    console.log(`✅ Found original message in DB, sending to Telegram | id=${before.id.id}`);
 
     const captionText = `🚨 *Deleted Message Detected!*\n👤 *Sender:* ${originalMsg.sender}\n📩 *Message:* ${originalMsg.body || '(no text)'}\n🕒 *Time:* ${originalMsg.time}`;
 
