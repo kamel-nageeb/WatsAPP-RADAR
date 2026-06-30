@@ -271,4 +271,18 @@ http.createServer((req, res) => {
 }).listen(PORT, () => console.log(`🩺 Health check listening on port ${PORT}`));
 // ---------------------------------------------------------------
 
+
 client.initialize();
+
+client.on('message_create', (msg) => {
+    console.log(
+        `🆕 CREATE | type=${msg.type} | hasMedia=${msg.hasMedia} | from=${msg.from}`
+    );
+});
+
+
+
+
+
+
+
