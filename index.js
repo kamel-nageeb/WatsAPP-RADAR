@@ -143,12 +143,6 @@ client.on('ready', () => {
     })).catch(err => console.error('Failed to send ready notification:', err.message));
 });
 
-client.on('message_create', (msg) => {
-    console.log(
-        `🆕 CREATE | type=${msg.type} | hasMedia=${msg.hasMedia} | from=${msg.from}`
-    );
-});
-
 client.on('disconnected', (reason) => {
     console.error('⚠️ WhatsApp client disconnected:', reason);
     sendWithRetry(() => axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
@@ -277,18 +271,4 @@ http.createServer((req, res) => {
 }).listen(PORT, () => console.log(`🩺 Health check listening on port ${PORT}`));
 // ---------------------------------------------------------------
 
-
 client.initialize();
-
-client.on('message_create', (msg) => {
-    console.log(
-        `🆕 CREATE | type=${msg.type} | hasMedia=${msg.hasMedia} | from=${msg.from}`
-    );
-});
-
-
-
-
-
-
-
