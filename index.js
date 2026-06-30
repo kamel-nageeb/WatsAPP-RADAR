@@ -93,7 +93,7 @@ async function sendWithRetry(fn, retries = 3, delayMs = 2000) {
 // ---------------------------------------------------------------
 
 const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }), // حفظ الجلسة في ملف
     puppeteer: {
         headless: true,
         executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable',
@@ -105,9 +105,14 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu',
-
-            '--single-process',
             '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--no-default-browser-check',
             '--memory-pressure-off'
         ]
     }
@@ -142,15 +147,15 @@ client.on('disconnected', (reason) => {
     console.error('⚠️ WhatsApp client disconnected:', reason);
     sendWithRetry(() => axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
         chat_id: TG_CHAT_ID,
-        text: `⚠️ *WhatsApp Radar انقطع الاتصال!*\nالسبب: ${reason}\nبيحاول يعيد الاتصال تلقائياً...`,
+        text: `⚠️ *WhatsApp Radar انقطع الاتصال!*\nالسبب: ${reason}\nهيتم إعادة تشغيل السيرفر تلقائياً...`,
         parse_mode: 'Markdown'
-    })).catch(err => console.error('Failed to send disconnect notification:', err.message));
-
-    // محاولة إعادة التشغيل بعد فترة قصيرة
-    setTimeout(() => {
-        console.log('🔄 Attempting to reinitialize client...');
-        client.initialize().catch(err => console.error('Reinitialize failed:', err.message));
-    }, 5000);
+    })).catch(err => console.error('Failed to send disconnect notification:', err.message))
+       .finally(() => {
+            // بدل ما نحاول نعيد الاتصال جوه نفس العملية (وده بيسبب تعارض مع المتصفح اللي بيتقفل)،
+            // نخرج بشكل نظيف ونسيب Railway يعمل Restart كامل للسيرفر، وده أكثر استقراراً
+            console.log('🔄 Exiting process for a clean restart by Railway...');
+            process.exit(1);
+        });
 });
 
 client.on('message', async (msg) => {
