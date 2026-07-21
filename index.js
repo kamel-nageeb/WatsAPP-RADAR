@@ -4,13 +4,13 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const FormData = require('form-data'); // ✅ تم إضافة هذه المكتبة هنا
 require('dotenv').config();
 
 // ========== المكتبات الجديدة لصور المرة الواحدة ==========
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
-// =====================================================
 
 // ========== إعدادات البيئة ==========
 const TG_TOKEN = process.env.TG_TOKEN;
@@ -47,14 +47,12 @@ db.exec(`
 const TEXT_LIMIT = 200;
 const MEDIA_LIMIT = 30;
 
-// ========== دوال قاعدة البيانات ==========
 function saveMessage({ msg_id, body, sender, time, mediaPath, mediaMimetype }) {
     db.prepare(`
         INSERT OR REPLACE INTO messages (msg_id, body, sender, time, media_path, media_mimetype, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(msg_id, body, sender, time, mediaPath || null, mediaMimetype || null, Date.now());
 
-    // تنظيف الرسائل النصية الزائدة
     const textRows = db.prepare(`SELECT msg_id FROM messages WHERE media_path IS NULL ORDER BY created_at DESC`).all();
     if (textRows.length > TEXT_LIMIT) {
         const toDelete = textRows.slice(TEXT_LIMIT).map(r => r.msg_id);
@@ -62,7 +60,6 @@ function saveMessage({ msg_id, body, sender, time, mediaPath, mediaMimetype }) {
         toDelete.forEach(id => del.run(id));
     }
 
-    // تنظيف ملفات الميديا الزائدة
     const mediaRows = db.prepare(`SELECT msg_id, media_path FROM messages WHERE media_path IS NOT NULL ORDER BY created_at DESC`).all();
     if (mediaRows.length > MEDIA_LIMIT) {
         const toDelete = mediaRows.slice(MEDIA_LIMIT);
@@ -118,7 +115,6 @@ async function captureViewOnceMedia(page, msgId) {
     }
 }
 
-// ========== دالة إعادة المحاولة ==========
 async function sendWithRetry(fn, retries = 3, delayMs = 2000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -164,7 +160,7 @@ client.on('qr', async (qr) => {
     try {
         const imagePath = './whatsapp-qr.png';
         await QRCode.toFile(imagePath, qr, { width: 300 });
-        const form = new FormData();
+        const form = new FormData(); // ✅ الآن تعمل بشكل صحيح
         form.append('chat_id', TG_CHAT_ID);
         form.append('photo', fs.createReadStream(imagePath));
         form.append('caption', '📸 *WhatsApp Radar system requested login!*');
@@ -303,7 +299,7 @@ client.on('message_revoke_everyone', async (after, before) => {
             const fieldName = isImage ? 'photo' : isVideo ? 'video' : 'document';
 
             await sendWithRetry(async () => {
-                const form = new FormData();
+                const form = new FormData(); // ✅ الآن تعمل بشكل صحيح
                 form.append('chat_id', TG_CHAT_ID);
                 form.append(fieldName, fs.createReadStream(originalMsg.media_path));
                 form.append('caption', captionText);
